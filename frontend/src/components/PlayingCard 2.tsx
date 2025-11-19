@@ -1,0 +1,104 @@
+import React from 'react';
+
+interface PlayingCardProps {
+  rank?: string;
+  suit?: 'hearts' | 'diamonds' | 'clubs' | 'spades';
+  size?: 'sm' | 'md' | 'lg';
+  faceDown?: boolean;
+}
+
+// Map rank and suit to SVG filename
+const getCardFilename = (rank: string, suit: string): string => {
+  const rankMap: { [key: string]: string } = {
+    'A': 'ace',
+    '2': '2',
+    '3': '3',
+    '4': '4',
+    '5': '5',
+    '6': '6',
+    '7': '7',
+    '8': '8',
+    '9': '9',
+    '10': '10',
+    'T': '10',
+    'J': 'jack',
+    'Q': 'queen',
+    'K': 'king',
+  };
+
+  const suitMap: { [key: string]: string } = {
+    'hearts': 'hearts',
+    'diamonds': 'diamonds',
+    'clubs': 'clubs',
+    'spades': 'spades',
+  };
+
+  const mappedRank = rankMap[rank.toUpperCase()] || rank.toLowerCase();
+  const mappedSuit = suitMap[suit] || suit;
+
+  return `${mappedRank}_of_${mappedSuit}.svg`;
+};
+
+const sizeMap = {
+  sm: { width: 60, height: 84 },   // Small cards for community board
+  md: { width: 80, height: 112 },  // Medium cards
+  lg: { width: 100, height: 140 }, // Large cards for hand selection
+};
+
+export function PlayingCard({ rank, suit, size = 'md', faceDown = false }: PlayingCardProps) {
+  const dimensions = sizeMap[size];
+
+  // Render face-down card
+  if (faceDown) {
+    return (
+      <div
+        className="inline-block rounded-lg overflow-hidden shadow-md border border-slate-600"
+        style={{
+          width: `${dimensions.width}px`,
+          height: `${dimensions.height}px`,
+          background: 'linear-gradient(135deg, #1e293b 0%, #334155 50%, #1e293b 100%)',
+          position: 'relative'
+        }}
+      >
+        <div
+          className="absolute inset-0 flex items-center justify-center"
+          style={{
+            background: `
+              repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(248, 113, 113, 0.1) 10px,
+                rgba(248, 113, 113, 0.1) 20px
+              )
+            `
+          }}
+        >
+          <div className="w-[70%] h-[85%] border-2 border-red-800/40 rounded-md" />
+        </div>
+      </div>
+    );
+  }
+
+  // Render face-up card
+  if (!rank || !suit) {
+    console.error('PlayingCard requires rank and suit when not face-down');
+    return null;
+  }
+
+  const filename = getCardFilename(rank, suit);
+  const cardUrl = `/SVG-cards-1.3/${filename}`;
+
+  return (
+    <img
+      src={cardUrl}
+      alt={`${rank} of ${suit}`}
+      className="inline-block rounded-md shadow-md"
+      style={{
+        width: `${dimensions.width}px`,
+        height: `${dimensions.height}px`,
+        objectFit: 'contain'
+      }}
+    />
+  );
+}
