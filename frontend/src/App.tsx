@@ -22,6 +22,8 @@ function App() {
   const [equityResult, setEquityResult] = useState<EquityResult | null>(null);
   const [score, setScore] = useState({ correct: 0, total: 0 });
   const [loading, setLoading] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(10);
+  const [gameOver, setGameOver] = useState(false);
 
   const currentScenario = scenarios[currentScenarioIndex];
 
@@ -56,10 +58,29 @@ function App() {
 
   useEffect(() => {
     calculateEquity(currentScenario);
+    setTimeLeft(10);
   }, [currentScenarioIndex]);
 
+  // Countdown timer
+  useEffect(() => {
+    if (gameState !== 'playing' || gameOver) return;
+
+    if (timeLeft === 0) {
+      // Time's up - treat as incorrect
+      setGameState('incorrect');
+      setGameOver(true);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft(prev => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft, gameState, gameOver]);
+
   const handleHandClick = (handNumber: 1 | 2) => {
-    if (gameState !== 'playing' || !equityResult) return;
+    if (gameState !== 'playing' || !equityResult || gameOver) return;
 
     const hand1Equity = equityResult.equities[0];
     const hand2Equity = equityResult.equities[1];
@@ -69,168 +90,235 @@ function App() {
       (handNumber === 2 && hand2Equity > hand1Equity);
 
     setGameState(isCorrect ? 'correct' : 'incorrect');
-    setScore(prev => ({
-      correct: prev.correct + (isCorrect ? 1 : 0),
-      total: prev.total + 1,
-    }));
+
+    if (!isCorrect) {
+      // Wrong answer - game over, must restart
+      setGameOver(true);
+    } else {
+      // Correct answer - increment score
+      setScore(prev => ({
+        correct: prev.correct + 1,
+        total: prev.total + 1,
+      }));
+    }
   };
 
   const handleNextHand = () => {
+    if (currentScenarioIndex >= scenarios.length - 1) {
+      // Completed all 10 scenarios!
+      setGameOver(true);
+      return;
+    }
+
     setGameState('playing');
-    setCurrentScenarioIndex((prev) => (prev + 1) % scenarios.length);
+    setCurrentScenarioIndex((prev) => prev + 1);
+    setTimeLeft(10);
   };
 
+  const handleRestart = () => {
+    setCurrentScenarioIndex(0);
+    setGameState('playing');
+    setScore({ correct: 0, total: 0 });
+    setGameOver(false);
+    setTimeLeft(10);
+  };
+
+  const accuracy = score.total > 0 ? ((score.correct / score.total) * 100).toFixed(0) : '0';
+
+  // Calculate how many face-down cards to show (5 total community cards)
+  const totalCommunityCards = 5;
+  const revealedCards = currentScenario.community.length;
+  const faceDownCount = totalCommunityCards - revealedCards;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-slate-900 mb-4">
-            EquityGuessr
-          </h1>
-          <div className="flex justify-center gap-8 text-lg">
-            <div className="text-slate-600">
-              Score: <span className="font-bold text-slate-900">{score.correct}/{score.total}</span>
-            </div>
-            <div className="text-slate-600">
-              Accuracy: <span className="font-bold text-slate-900">
-                {score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0}%
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Community Cards */}
-        {currentScenario.community.length > 0 && (
-          <div className="mb-12">
-            <h2 className="text-3xl font-bold text-center mb-6 text-slate-800">
-              Community Cards
-            </h2>
-            <div className="flex justify-center gap-3">
-              {currentScenario.community.map((card, idx) => (
-                <PlayingCard
-                  key={idx}
-                  rank={card.rank}
-                  suit={card.suit}
-                  size="md"
-                />
-              ))}
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="flex gap-8 items-center h-screen py-4">
+        {/* Main Game Container */}
+        <div className="bg-white border-2 border-black h-full flex flex-col" style={{ width: '850px' }}>
+          {/* Header Section */}
+          <div className="bg-black px-10 py-6 border-b-2 border-black">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="text-white text-3xl">♠</div>
+                <h1 className="text-3xl font-extrabold text-white tracking-tight uppercase">
+                  EquityGuesser
+                </h1>
+              </div>
+              <div className="flex items-center gap-12">
+                <div className="text-center">
+                  <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Progress</div>
+                  <div className="text-3xl font-bold text-white">{currentScenarioIndex + 1}/10</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Time</div>
+                  <div className={cn(
+                    "text-3xl font-bold",
+                    timeLeft <= 3 ? "text-red-500" : "text-white"
+                  )}>{timeLeft}s</div>
+                </div>
+              </div>
             </div>
           </div>
-        )}
 
-        {/* Hands */}
-        <div className="grid grid-cols-2 gap-8 mb-8">
-          {/* Hand 1 */}
-          <Card
-            className={cn(
-              'cursor-pointer transition-all duration-300 hover:scale-105',
-              gameState === 'playing' && 'hover:shadow-xl hover:border-blue-400',
-              gameState === 'correct' && equityResult && equityResult.equities[0] > equityResult.equities[1] && 'border-green-500 border-4 shadow-xl',
-              gameState === 'incorrect' && equityResult && equityResult.equities[0] > equityResult.equities[1] && 'border-green-500 border-4 shadow-xl',
-              gameState === 'incorrect' && equityResult && equityResult.equities[0] < equityResult.equities[1] && 'opacity-50'
-            )}
-            onClick={() => handleHandClick(1)}
-          >
-            <CardContent className="p-8">
-              <h3 className="text-2xl font-bold text-center mb-6 text-slate-800">
-                Hand 1
-              </h3>
-              <div className="flex justify-center gap-4">
-                {currentScenario.hand1.map((card, idx) => (
+          {/* Community Cards Section - Moved to Top */}
+          <div className="px-10 py-8 bg-white border-b-2 border-black">
+            <div className="text-sm font-bold text-gray-500 uppercase tracking-widest text-center mb-6">
+              Community Board
+            </div>
+            <div className="flex justify-center items-center">
+              <div className="flex gap-2">
+                {/* Always show exactly 5 cards */}
+                {/* Show revealed cards first */}
+                {currentScenario.community.map((card, idx) => (
                   <PlayingCard
-                    key={idx}
+                    key={`revealed-${idx}`}
                     rank={card.rank}
                     suit={card.suit}
-                    size="lg"
+                    size="md"
+                  />
+                ))}
+                {/* Show face-down cards for unrevealed */}
+                {Array.from({ length: faceDownCount }).map((_, idx) => (
+                  <PlayingCard
+                    key={`facedown-${idx}`}
+                    faceDown={true}
+                    size="md"
                   />
                 ))}
               </div>
-              {gameState !== 'playing' && equityResult && (
-                <div className="mt-6 text-center">
-                  <div className="text-3xl font-bold text-slate-900">
+            </div>
+          </div>
+
+          {/* Hand Selection Section - Horizontal layout */}
+          <div className="flex-1 flex flex-col justify-center bg-white px-10">
+            <div className="grid grid-cols-3 gap-8 items-center mt-8 mb-12">
+              {/* Hand 1 */}
+              <div
+                className={cn(
+                  'cursor-pointer transition-all duration-200 flex flex-col items-center',
+                  gameState === 'playing' && 'hover:scale-105'
+                )}
+                onClick={() => handleHandClick(1)}
+              >
+                <div className={cn(
+                  "flex justify-center gap-1",
+                  gameState === 'correct' && equityResult && equityResult.equities[0] > equityResult.equities[1] && 'ring-4 ring-black rounded-lg p-1',
+                  gameState === 'incorrect' && equityResult && equityResult.equities[0] > equityResult.equities[1] && 'ring-4 ring-black rounded-lg p-1',
+                  gameState === 'incorrect' && equityResult && equityResult.equities[0] < equityResult.equities[1] && 'opacity-40'
+                )}>
+                  {currentScenario.hand1.map((card, idx) => (
+                    <PlayingCard
+                      key={idx}
+                      rank={card.rank}
+                      suit={card.suit}
+                      size="md"
+                    />
+                  ))}
+                </div>
+                {gameState !== 'playing' && equityResult && (
+                  <div className="text-2xl font-bold text-black mt-4">
                     {(equityResult.equities[0] * 100).toFixed(1)}%
                   </div>
-                  <div className="text-sm text-slate-600">equity</div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Hand 2 */}
-          <Card
-            className={cn(
-              'cursor-pointer transition-all duration-300 hover:scale-105',
-              gameState === 'playing' && 'hover:shadow-xl hover:border-blue-400',
-              gameState === 'correct' && equityResult && equityResult.equities[1] > equityResult.equities[0] && 'border-green-500 border-4 shadow-xl',
-              gameState === 'incorrect' && equityResult && equityResult.equities[1] > equityResult.equities[0] && 'border-green-500 border-4 shadow-xl',
-              gameState === 'incorrect' && equityResult && equityResult.equities[1] < equityResult.equities[0] && 'opacity-50'
-            )}
-            onClick={() => handleHandClick(2)}
-          >
-            <CardContent className="p-8">
-              <h3 className="text-2xl font-bold text-center mb-6 text-slate-800">
-                Hand 2
-              </h3>
-              <div className="flex justify-center gap-4">
-                {currentScenario.hand2.map((card, idx) => (
-                  <PlayingCard
-                    key={idx}
-                    rank={card.rank}
-                    suit={card.suit}
-                    size="lg"
-                  />
-                ))}
+                )}
               </div>
-              {gameState !== 'playing' && equityResult && (
-                <div className="mt-6 text-center">
-                  <div className="text-3xl font-bold text-slate-900">
+
+              {/* VS Divider */}
+              <div className="text-center">
+                <div className="text-2xl font-bold text-gray-400">VS</div>
+              </div>
+
+              {/* Hand 2 */}
+              <div
+                className={cn(
+                  'cursor-pointer transition-all duration-200 flex flex-col items-center',
+                  gameState === 'playing' && 'hover:scale-105'
+                )}
+                onClick={() => handleHandClick(2)}
+              >
+                <div className={cn(
+                  "flex justify-center gap-1",
+                  gameState === 'correct' && equityResult && equityResult.equities[1] > equityResult.equities[0] && 'ring-4 ring-black rounded-lg p-1',
+                  gameState === 'incorrect' && equityResult && equityResult.equities[1] > equityResult.equities[0] && 'ring-4 ring-black rounded-lg p-1',
+                  gameState === 'incorrect' && equityResult && equityResult.equities[1] < equityResult.equities[0] && 'opacity-40'
+                )}>
+                  {currentScenario.hand2.map((card, idx) => (
+                    <PlayingCard
+                      key={idx}
+                      rank={card.rank}
+                      suit={card.suit}
+                      size="md"
+                    />
+                  ))}
+                </div>
+                {gameState !== 'playing' && equityResult && (
+                  <div className="text-2xl font-bold text-black mt-4">
                     {(equityResult.equities[1] * 100).toFixed(1)}%
                   </div>
-                  <div className="text-sm text-slate-600">equity</div>
+                )}
+              </div>
+            </div>
+
+            {/* Instructions/Feedback */}
+            <div className="text-center py-4">
+              {gameState === 'playing' && !gameOver && (
+                <p className="text-sm text-gray-600 font-medium">
+                  Click on the hand you think has more equity
+                </p>
+              )}
+              {gameState === 'correct' && !gameOver && (
+                <div className="space-y-4">
+                  <div className="text-2xl text-green-600 font-bold">
+                    ✓ Correct!
+                  </div>
+                  <Button
+                    onClick={handleNextHand}
+                    size="lg"
+                    className="bg-green-500 hover:bg-green-600 text-white text-lg font-bold border-2 border-black px-8 py-6"
+                  >
+                    {currentScenarioIndex >= scenarios.length - 1 ? 'Finish' : 'Next →'}
+                  </Button>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Instructions/Feedback */}
-        <div className="text-center mb-8">
-          {gameState === 'playing' && (
-            <p className="text-2xl text-slate-700 font-medium">
-              Click on the hand you think has more equity
-            </p>
-          )}
-          {gameState === 'correct' && (
-            <div className="space-y-4">
-              <p className="text-3xl text-green-600 font-bold animate-bounce">
-                ✓ Correct!
-              </p>
-              <Button onClick={handleNextHand} size="lg" className="text-lg px-8">
-                Next Hand →
-              </Button>
+              {gameState === 'incorrect' && gameOver && (
+                <div className="space-y-4">
+                  <p className="text-3xl text-red-600 font-bold">
+                    Game Over!
+                  </p>
+                  <p className="text-lg text-gray-600">
+                    {timeLeft === 0 ? "Time's up!" : currentScenario.description}
+                  </p>
+                  <p className="text-xl font-bold text-black">
+                    You got {score.correct} out of 10 correct
+                  </p>
+                  <Button
+                    onClick={handleRestart}
+                    size="lg"
+                    className="bg-black hover:bg-gray-900 text-white text-lg font-bold border-2 border-black px-8 py-6"
+                  >
+                    Restart
+                  </Button>
+                </div>
+              )}
+              {gameState === 'correct' && gameOver && currentScenarioIndex >= scenarios.length - 1 && (
+                <div className="space-y-4">
+                  <p className="text-3xl text-green-600 font-bold">
+                    🎉 Perfect! You got all 10 correct!
+                  </p>
+                  <Button
+                    onClick={handleRestart}
+                    size="lg"
+                    className="bg-green-500 hover:bg-green-600 text-white text-lg font-bold border-2 border-black px-8 py-6"
+                  >
+                    Play Again
+                  </Button>
+                </div>
+              )}
+              {loading && (
+                <p className="text-sm text-gray-500 animate-pulse">Calculating equity...</p>
+              )}
             </div>
-          )}
-          {gameState === 'incorrect' && (
-            <div className="space-y-4">
-              <p className="text-3xl text-red-600 font-bold">
-                ✗ Incorrect
-              </p>
-              <p className="text-lg text-slate-600">
-                {currentScenario.description}
-              </p>
-              <Button onClick={handleNextHand} size="lg" className="text-lg px-8">
-                Next Hand →
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {loading && (
-          <div className="text-center text-slate-600">
-            <p>Calculating equity...</p>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
