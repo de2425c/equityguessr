@@ -80,6 +80,11 @@ def calculate_equity(hand1, hand2, board):
         'board': board if board else ''
     }
 
+    # Force enumeration for turn (8 chars = 4 cards) to avoid Monte Carlo timeout
+    # On turn, only 1 card remains so enumeration is fast and accurate
+    if len(board) == 8:
+        payload['enumerate_all'] = True
+
     try:
         response = requests.post(f'{BACKEND_URL}/equity', json=payload, timeout=30)
         response.raise_for_status()
@@ -150,14 +155,30 @@ def main():
                         help='Total number of scenarios to generate (default: 3000000)')
     parser.add_argument('--batch-size', type=int, default=1000,
                         help='Number of scenarios per DB insert (default: 1000)')
+    parser.add_argument('--stages', type=str, default='preflop,flop,turn',
+                        help='Comma-separated list of stages to run (default: preflop,flop,turn)')
     args = parser.parse_args()
 
     total_scenarios = args.total
     batch_size = args.batch_size
 
+    # Parse stages
+    requested_stages = [s.strip() for s in args.stages.split(',')]
+    valid_stages = ['preflop', 'flop', 'turn']
+
+    # Validate stages
+    for stage in requested_stages:
+        if stage not in valid_stages:
+            print(f"Error: Invalid stage '{stage}'. Must be one of: {', '.join(valid_stages)}")
+            sys.exit(1)
+
+    if not requested_stages:
+        print("Error: At least one stage must be specified")
+        sys.exit(1)
+
     # Validate inputs
-    if total_scenarios < 3:
-        print("Error: --total must be at least 3 (one per stage)")
+    if total_scenarios < len(requested_stages):
+        print(f"Error: --total must be at least {len(requested_stages)} (one per stage)")
         sys.exit(1)
 
     if batch_size < 1:
@@ -169,7 +190,8 @@ def main():
     print("=" * 60)
     print(f"Total scenarios: {total_scenarios:,}")
     print(f"Batch size: {batch_size:,}")
-    print(f"Distribution: 1/3 preflop, 1/3 flop, 1/3 turn")
+    print(f"Stages: {', '.join(requested_stages)}")
+    print(f"Distribution: Equal split across {len(requested_stages)} stage(s)")
     print("=" * 60)
 
     # Check environment variables
@@ -200,21 +222,22 @@ def main():
 
     print("\nStarting precomputation...\n")
 
-    # Calculate scenarios per stage (1/3 each)
-    scenarios_per_stage = total_scenarios // 3
-    stages = ['preflop', 'flop', 'turn']
+    # Calculate scenarios per stage - divide equally among requested stages
+    scenarios_per_stage = total_scenarios // len(requested_stages)
 
-    # Adjust for any remainder
-    stage_counts = {
-        'preflop': scenarios_per_stage,
-        'flop': scenarios_per_stage,
-        'turn': scenarios_per_stage + (total_scenarios % 3)  # Add remainder to turn
-    }
+    # Adjust for any remainder - add to last stage
+    stage_counts = {}
+    for i, stage in enumerate(requested_stages):
+        if i == len(requested_stages) - 1:
+            # Add remainder to last stage
+            stage_counts[stage] = scenarios_per_stage + (total_scenarios % len(requested_stages))
+        else:
+            stage_counts[stage] = scenarios_per_stage
 
     total_processed = 0
 
     # Process each stage
-    for stage in stages:
+    for stage in requested_stages:
         count = stage_counts[stage]
         print(f"\n{'=' * 60}")
         print(f"Processing {stage.upper()} scenarios ({count:,})")
