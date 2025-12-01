@@ -276,45 +276,45 @@ function App() {
   // Show start screen if game hasn't started
   if (gameState === 'not-started') {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
-        <Card className="border-4 border-black max-w-2xl shadow-2xl">
-          <CardHeader className="text-center pb-8">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="text-6xl">♠</div>
-              <CardTitle className="text-5xl font-extrabold tracking-tight uppercase">
+      <div className="min-h-screen bg-white flex items-center justify-center p-2 sm:p-4">
+        <Card className="border-2 sm:border-4 border-black w-full max-w-md sm:max-w-lg shadow-2xl">
+          <CardHeader className="text-center pb-4 sm:pb-6 px-3 sm:px-6">
+            <div className="flex items-center justify-center gap-2 sm:gap-3 mb-2 sm:mb-4">
+              <div className="text-3xl sm:text-5xl">♠</div>
+              <CardTitle className="text-2xl sm:text-4xl font-extrabold tracking-tight uppercase">
                 EquityGuesser
               </CardTitle>
-              <div className="text-6xl">♣</div>
+              <div className="text-3xl sm:text-5xl">♣</div>
             </div>
-            <CardDescription className="text-lg text-gray-600 font-semibold">
+            <CardDescription className="text-sm sm:text-base text-gray-600 font-semibold">
               Test your poker hand evaluation skills!
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6">
 
             {/* Leaderboard & How to Play Accordions */}
             <Accordion type="single" collapsible className="w-full space-y-2">
-              <AccordionItem value="leaderboard" className="border-2 border-gray-200">
-                <AccordionTrigger className="text-lg font-bold hover:no-underline px-4 py-2">
+              <AccordionItem value="leaderboard" className="border border-gray-200">
+                <AccordionTrigger className="text-base font-bold hover:no-underline px-3 py-2">
                   Leaderboard
                 </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4">
+                <AccordionContent className="px-3 pb-3">
                   <Leaderboard compact />
                 </AccordionContent>
               </AccordionItem>
-              <AccordionItem value="how-to-play" className="border-2 border-gray-200">
-                <AccordionTrigger className="text-lg font-bold hover:no-underline px-4 py-2">
+              <AccordionItem value="how-to-play" className="border border-gray-200">
+                <AccordionTrigger className="text-base font-bold hover:no-underline px-3 py-2">
                   How to Play
                 </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4">
-                  <ol className="space-y-1 text-left text-sm">
+                <AccordionContent className="px-3 pb-3">
+                  <ol className="space-y-1 text-left text-xs sm:text-sm">
                     <li className="flex gap-2">
                       <span className="font-bold">1.</span>
-                      <span className="text-gray-700">Click the hand with higher equity (better chance of winning).</span>
+                      <span className="text-gray-700">Click the hand with higher equity.</span>
                     </li>
                     <li className="flex gap-2">
                       <span className="font-bold">2.</span>
-                      <span className="text-gray-700">You start with 10s, time decreases as your streak grows.</span>
+                      <span className="text-gray-700">Time decreases as your streak grows.</span>
                     </li>
                     <li className="flex gap-2">
                       <span className="font-bold">3.</span>
@@ -328,8 +328,8 @@ function App() {
             {/* High Score Display */}
             {highScore > 0 && (
               <div className="text-center">
-                <p className="text-sm text-gray-600">Your Best Streak</p>
-                <Badge className="mt-1 text-xl px-3 py-1 bg-yellow-500 hover:bg-yellow-600">
+                <p className="text-xs sm:text-sm text-gray-600">Your Best Streak</p>
+                <Badge className="mt-1 text-lg sm:text-xl px-3 py-1 bg-yellow-500 hover:bg-yellow-600">
                   {highScore}
                 </Badge>
               </div>
@@ -340,14 +340,14 @@ function App() {
               <Button
                 onClick={handleStartGame}
                 size="lg"
-                className="bg-black hover:bg-gray-900 text-white text-xl font-bold border-2 border-black px-12 py-6 uppercase tracking-wider transform hover:scale-105 transition-all"
+                className="bg-black hover:bg-gray-900 text-white text-lg sm:text-xl font-bold border-2 border-black px-8 sm:px-12 py-5 sm:py-6 uppercase tracking-wider transform hover:scale-105 transition-all"
               >
                 Start Game
               </Button>
             </div>
 
             {/* Bottom decoration */}
-            <div className="flex justify-center gap-2 pt-2 text-xl">
+            <div className="flex justify-center gap-2 pt-2 text-lg sm:text-xl">
               <span>♥</span>
               <span>♦</span>
               <span>♣</span>
@@ -361,36 +361,36 @@ function App() {
 
   if (!currentScenario) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+      <div className="min-h-screen bg-white flex items-center justify-center p-2 sm:p-4">
         <Card className="border-2 border-black w-full max-w-4xl">
           <CardHeader>
-            <div className="flex items-center justify-center gap-3">
-              <Skeleton className="h-10 w-10 rounded-full" />
-              <Skeleton className="h-10 w-48" />
-              <Skeleton className="h-10 w-10 rounded-full" />
+            <div className="flex items-center justify-center gap-2 sm:gap-3">
+              <Skeleton className="h-8 w-8 sm:h-10 sm:w-10 rounded-full" />
+              <Skeleton className="h-8 w-32 sm:h-10 sm:w-48" />
+              <Skeleton className="h-8 w-8 sm:h-10 sm:w-10 rounded-full" />
             </div>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex justify-center gap-2">
-              <Skeleton className="h-32 w-24 rounded-lg" />
-              <Skeleton className="h-32 w-24 rounded-lg" />
-              <Skeleton className="h-32 w-24 rounded-lg" />
-              <Skeleton className="h-32 w-24 rounded-lg" />
-              <Skeleton className="h-32 w-24 rounded-lg" />
+          <CardContent className="space-y-4 sm:space-y-6">
+            <div className="flex justify-center gap-1 sm:gap-2">
+              <Skeleton className="h-20 w-14 sm:h-28 sm:w-20 rounded-lg" />
+              <Skeleton className="h-20 w-14 sm:h-28 sm:w-20 rounded-lg" />
+              <Skeleton className="h-20 w-14 sm:h-28 sm:w-20 rounded-lg" />
+              <Skeleton className="h-20 w-14 sm:h-28 sm:w-20 rounded-lg" />
+              <Skeleton className="h-20 w-14 sm:h-28 sm:w-20 rounded-lg" />
             </div>
             <Separator />
             <div className="flex justify-around">
-              <div className="flex gap-2">
-                <Skeleton className="h-32 w-24 rounded-lg" />
-                <Skeleton className="h-32 w-24 rounded-lg" />
+              <div className="flex gap-1 sm:gap-2">
+                <Skeleton className="h-20 w-14 sm:h-28 sm:w-20 rounded-lg" />
+                <Skeleton className="h-20 w-14 sm:h-28 sm:w-20 rounded-lg" />
               </div>
-              <div className="flex gap-2">
-                <Skeleton className="h-32 w-24 rounded-lg" />
-                <Skeleton className="h-32 w-24 rounded-lg" />
+              <div className="flex gap-1 sm:gap-2">
+                <Skeleton className="h-20 w-14 sm:h-28 sm:w-20 rounded-lg" />
+                <Skeleton className="h-20 w-14 sm:h-28 sm:w-20 rounded-lg" />
               </div>
             </div>
             <div className="text-center">
-              <p className="text-lg font-semibold animate-pulse">Loading game...</p>
+              <p className="text-base sm:text-lg font-semibold animate-pulse">Loading game...</p>
             </div>
           </CardContent>
         </Card>
@@ -401,37 +401,37 @@ function App() {
   return (
     <>
     <Analytics />
-    <div className="min-h-screen bg-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-white flex items-center justify-center p-1 sm:p-4">
       {/* Main Game Container */}
-      <Card className="border-4 border-black w-full max-w-5xl shadow-2xl">
+      <Card className="border-2 sm:border-4 border-black w-full max-w-5xl shadow-2xl">
         {/* Header Section */}
-        <CardHeader className="bg-black rounded-t-none border-b-2 border-black">
+        <CardHeader className="bg-black rounded-t-none border-b-2 border-black px-2 sm:px-6 py-3 sm:py-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="text-white text-3xl">♠</div>
-              <CardTitle className="text-3xl font-extrabold text-white tracking-tight uppercase">
+            <div className="flex items-center gap-1 sm:gap-3">
+              <div className="text-white text-xl sm:text-3xl">♠</div>
+              <CardTitle className="text-base sm:text-2xl font-extrabold text-white tracking-tight uppercase">
                 EquityGuesser
               </CardTitle>
             </div>
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2 sm:gap-6">
               <div className="text-center">
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Streak</div>
-                <Badge variant="secondary" className="text-2xl px-4 py-2 bg-white text-black">
+                <div className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider sm:tracking-widest mb-1">Streak</div>
+                <Badge variant="secondary" className="text-lg sm:text-2xl px-2 sm:px-4 py-1 sm:py-2 bg-white text-black">
                   {streak}
                 </Badge>
               </div>
-              <div className="text-center">
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Best</div>
-                <Badge className="text-xl px-3 py-1 bg-yellow-500 hover:bg-yellow-600">
+              <div className="text-center hidden sm:block">
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Best</div>
+                <Badge className="text-lg px-2 py-1 bg-yellow-500 hover:bg-yellow-600">
                   {highScore}
                 </Badge>
               </div>
               <div className="text-center">
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Time</div>
+                <div className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider sm:tracking-widest mb-1">Time</div>
                 <Badge
                   variant={timeLeft <= 3 ? "destructive" : "secondary"}
                   className={cn(
-                    "text-2xl px-4 py-2",
+                    "text-lg sm:text-2xl px-2 sm:px-4 py-1 sm:py-2",
                     timeLeft <= 3 ? "" : "bg-white text-black"
                   )}
                 >
@@ -443,32 +443,31 @@ function App() {
         </CardHeader>
 
         {/* Difficulty Indicator */}
-        <div className="px-8 py-4 bg-gray-100 border-b border-gray-300">
+        <div className="px-2 sm:px-8 py-2 sm:py-4 bg-gray-100 border-b border-gray-300">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Badge variant="outline" className="text-xs font-bold uppercase">
-                Stage: {getStageDisplay()}
+            <div className="flex items-center gap-2 sm:gap-4">
+              <Badge variant="outline" className="text-[10px] sm:text-xs font-bold uppercase">
+                {getStageDisplay()}
               </Badge>
-              <Separator orientation="vertical" className="h-4" />
-              <Badge variant="outline" className="text-xs font-bold uppercase">
-                Difficulty: {difficultyPercent}%
+              <Badge variant="outline" className="text-[10px] sm:text-xs font-bold uppercase">
+                {difficultyPercent}%
               </Badge>
             </div>
             <Progress
               value={difficultyPercent}
-              className="w-32 h-2"
+              className="w-16 sm:w-32 h-2"
             />
           </div>
         </div>
 
         <CardContent className="p-0">
           {/* Community Cards Section */}
-          <div className="px-10 py-8 bg-white border-b-2 border-black">
-            <div className="text-sm font-bold text-gray-500 uppercase tracking-widest text-center mb-6">
-              Community Board
+          <div className="px-2 sm:px-10 py-4 sm:py-8 bg-white border-b-2 border-black">
+            <div className="text-xs sm:text-sm font-bold text-gray-500 uppercase tracking-widest text-center mb-3 sm:mb-6">
+              Board
             </div>
             <div className="flex justify-center items-center">
-              <div key={`community-${scenarioId}`} className="flex gap-2">
+              <div key={`community-${scenarioId}`} className="flex gap-1 sm:gap-2">
                 {/* Always show exactly 5 cards */}
                 {/* Show revealed cards first */}
                 {currentScenario.community.map((card, idx) => (
@@ -476,7 +475,7 @@ function App() {
                     key={`revealed-${idx}`}
                     rank={card.rank}
                     suit={mapSuit(card.suit)}
-                    size="md"
+                    size="sm"
                   />
                 ))}
                 {/* Show face-down cards for unrevealed */}
@@ -484,7 +483,7 @@ function App() {
                   <PlayingCard
                     key={`facedown-${idx}`}
                     faceDown={true}
-                    size="md"
+                    size="sm"
                   />
                 ))}
               </div>
@@ -492,22 +491,22 @@ function App() {
           </div>
 
           {/* Hand Selection Section - Horizontal layout */}
-          <div className="flex-1 flex flex-col justify-center bg-white px-10">
-            <div className="grid grid-cols-3 gap-8 items-center mt-8 mb-12">
+          <div className="flex-1 flex flex-col justify-center bg-white px-2 sm:px-10">
+            <div className="grid grid-cols-3 gap-2 sm:gap-8 items-center my-4 sm:my-8">
               {/* Hand 1 */}
               <div
                 className={cn(
                   'cursor-pointer transition-all duration-200 flex flex-col items-center',
-                  gameState === 'playing' && 'hover:scale-105'
+                  gameState === 'playing' && 'hover:scale-105 active:scale-95'
                 )}
                 onClick={() => handleHandClick(1)}
               >
                 <div
                   key={`hand1-${scenarioId}`}
                   className={cn(
-                  "flex justify-center gap-1",
-                  gameState === 'correct' && equityResult && equityResult.equities[0] > equityResult.equities[1] && 'ring-4 ring-black rounded-lg p-1',
-                  gameState === 'incorrect' && equityResult && equityResult.equities[0] > equityResult.equities[1] && 'ring-4 ring-black rounded-lg p-1',
+                  "flex justify-center gap-0.5 sm:gap-1",
+                  gameState === 'correct' && equityResult && equityResult.equities[0] > equityResult.equities[1] && 'ring-2 sm:ring-4 ring-black rounded-lg p-0.5 sm:p-1',
+                  gameState === 'incorrect' && equityResult && equityResult.equities[0] > equityResult.equities[1] && 'ring-2 sm:ring-4 ring-black rounded-lg p-0.5 sm:p-1',
                   gameState === 'incorrect' && equityResult && equityResult.equities[0] < equityResult.equities[1] && 'opacity-40'
                 )}>
                   {currentScenario.hand1.map((card, idx) => (
@@ -515,12 +514,12 @@ function App() {
                       key={idx}
                       rank={card.rank}
                       suit={mapSuit(card.suit)}
-                      size="md"
+                      size="sm"
                     />
                   ))}
                 </div>
                 {gameState !== 'playing' && gameState !== 'loading' && equityResult && (
-                  <div className="text-2xl font-bold text-black mt-4">
+                  <div className="text-base sm:text-2xl font-bold text-black mt-2 sm:mt-4">
                     {(equityResult.equities[0] * 100).toFixed(1)}%
                   </div>
                 )}
@@ -528,23 +527,23 @@ function App() {
 
               {/* VS Divider */}
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-400">VS</div>
+                <div className="text-lg sm:text-2xl font-bold text-gray-400">VS</div>
               </div>
 
               {/* Hand 2 */}
               <div
                 className={cn(
                   'cursor-pointer transition-all duration-200 flex flex-col items-center',
-                  gameState === 'playing' && 'hover:scale-105'
+                  gameState === 'playing' && 'hover:scale-105 active:scale-95'
                 )}
                 onClick={() => handleHandClick(2)}
               >
                 <div
                   key={`hand2-${scenarioId}`}
                   className={cn(
-                  "flex justify-center gap-1",
-                  gameState === 'correct' && equityResult && equityResult.equities[1] > equityResult.equities[0] && 'ring-4 ring-black rounded-lg p-1',
-                  gameState === 'incorrect' && equityResult && equityResult.equities[1] > equityResult.equities[0] && 'ring-4 ring-black rounded-lg p-1',
+                  "flex justify-center gap-0.5 sm:gap-1",
+                  gameState === 'correct' && equityResult && equityResult.equities[1] > equityResult.equities[0] && 'ring-2 sm:ring-4 ring-black rounded-lg p-0.5 sm:p-1',
+                  gameState === 'incorrect' && equityResult && equityResult.equities[1] > equityResult.equities[0] && 'ring-2 sm:ring-4 ring-black rounded-lg p-0.5 sm:p-1',
                   gameState === 'incorrect' && equityResult && equityResult.equities[1] < equityResult.equities[0] && 'opacity-40'
                 )}>
                   {currentScenario.hand2.map((card, idx) => (
@@ -552,12 +551,12 @@ function App() {
                       key={idx}
                       rank={card.rank}
                       suit={mapSuit(card.suit)}
-                      size="md"
+                      size="sm"
                     />
                   ))}
                 </div>
                 {gameState !== 'playing' && gameState !== 'loading' && equityResult && (
-                  <div className="text-2xl font-bold text-black mt-4">
+                  <div className="text-base sm:text-2xl font-bold text-black mt-2 sm:mt-4">
                     {(equityResult.equities[1] * 100).toFixed(1)}%
                   </div>
                 )}
@@ -565,7 +564,7 @@ function App() {
             </div>
 
             {/* Instructions/Feedback */}
-            <div className="text-center py-4 px-10">
+            <div className="text-center py-2 sm:py-4 px-2 sm:px-10">
               {gameState === 'loading' && (
                 <Alert className="border-gray-300 bg-gray-50">
                   <AlertDescription className="text-center animate-pulse">
@@ -582,41 +581,38 @@ function App() {
               )}
               {gameState === 'correct' && !gameOver && (
                 <Alert className="border-green-500 bg-green-50">
-                  <AlertTitle className="text-center text-2xl text-green-600">
-                    ✓ Correct!
+                  <AlertTitle className="text-center text-lg sm:text-2xl text-green-600">
+                    Correct!
                   </AlertTitle>
-                  <AlertDescription className="text-center text-gray-600 mt-2">
-                    Loading next hand...
-                  </AlertDescription>
                 </Alert>
               )}
               {gameState === 'incorrect' && gameOver && (
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   <Alert variant="destructive" className="border-2">
-                    <AlertTitle className="text-center text-3xl mb-4">
+                    <AlertTitle className="text-center text-xl sm:text-3xl mb-2 sm:mb-4">
                       Game Over!
                     </AlertTitle>
-                    <AlertDescription className="space-y-4">
-                      <p className="text-lg text-center">
+                    <AlertDescription className="space-y-3 sm:space-y-4">
+                      <p className="text-sm sm:text-lg text-center">
                         {timeLeft === 0 ? "Time's up!" : "Wrong choice!"}
                       </p>
                       <div className="text-center space-y-2">
-                        <Badge variant="outline" className="text-xl px-4 py-2">
+                        <Badge variant="outline" className="text-base sm:text-xl px-3 sm:px-4 py-1 sm:py-2">
                           Final Streak: {streak}
                         </Badge>
                         {streak > highScore && (
                           <div>
-                            <Badge className="text-lg px-4 py-2 bg-green-600">
+                            <Badge className="text-sm sm:text-lg px-3 sm:px-4 py-1 sm:py-2 bg-green-600">
                               New High Score!
                             </Badge>
                           </div>
                         )}
                       </div>
-                      <div className="text-center pt-2">
+                      <div className="text-center pt-1 sm:pt-2">
                         <Button
                           onClick={handleRestart}
                           size="lg"
-                          className="bg-black hover:bg-gray-900 text-white text-lg font-bold border-2 border-black px-8 py-6"
+                          className="bg-black hover:bg-gray-900 text-white text-base sm:text-lg font-bold border-2 border-black px-6 sm:px-8 py-4 sm:py-6"
                         >
                           Restart
                         </Button>

@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 interface PlayingCardProps {
   rank?: string;
   suit?: 'hearts' | 'diamonds' | 'clubs' | 'spades';
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   faceDown?: boolean;
 }
 
@@ -58,9 +58,10 @@ const getCardFilename = (rank: string, suit: string): string => {
 };
 
 const sizeMap = {
-  sm: { width: 80, height: 112 },   // Small cards for community board
-  md: { width: 100, height: 140 },  // Medium cards
-  lg: { width: 120, height: 168 },  // Large cards for hand selection
+  xs: { width: 50, height: 70 },    // Extra small for mobile
+  sm: { width: 65, height: 91 },    // Small cards for mobile
+  md: { width: 85, height: 119 },   // Medium cards
+  lg: { width: 100, height: 140 },  // Large cards for desktop
 };
 
 export function PlayingCard({ rank, suit, size = 'md', faceDown = false }: PlayingCardProps) {
