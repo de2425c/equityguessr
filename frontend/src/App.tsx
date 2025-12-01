@@ -11,6 +11,7 @@ import { Skeleton } from './components/ui/skeleton';
 import { Separator } from './components/ui/separator';
 import { cn } from './lib/utils';
 import { ScenarioCache } from './services/ScenarioCache';
+import { Leaderboard } from './components/Leaderboard';
 
 interface CardType {
   rank: string;
@@ -70,6 +71,7 @@ function App() {
   const [gameOver, setGameOver] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
   const [scenarioId, setScenarioId] = useState(0);
+  const [leaderboardKey, setLeaderboardKey] = useState(0);
 
   // Initialize scenario cache
   const scenarioCacheRef = useRef<ScenarioCache | null>(null);
@@ -288,100 +290,64 @@ function App() {
               Test your poker hand evaluation skills!
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4">
 
-            {/* How to Play Section */}
-            <Accordion type="single" collapsible defaultValue="how-to-play" className="w-full">
+            {/* Leaderboard & How to Play Accordions */}
+            <Accordion type="single" collapsible className="w-full space-y-2">
+              <AccordionItem value="leaderboard" className="border-2 border-gray-200">
+                <AccordionTrigger className="text-lg font-bold hover:no-underline px-4 py-2">
+                  Leaderboard
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                  <Leaderboard compact />
+                </AccordionContent>
+              </AccordionItem>
               <AccordionItem value="how-to-play" className="border-2 border-gray-200">
-                <AccordionTrigger className="text-2xl font-bold hover:no-underline px-6">
+                <AccordionTrigger className="text-lg font-bold hover:no-underline px-4 py-2">
                   How to Play
                 </AccordionTrigger>
-                <AccordionContent className="px-6 pb-6">
-                  <ol className="space-y-3 text-left">
-                    <li className="flex gap-3">
-                      <span className="font-bold text-xl">1.</span>
-                      <span className="text-gray-700">
-                        You'll see two poker hands and the community cards (board).
-                      </span>
+                <AccordionContent className="px-4 pb-4">
+                  <ol className="space-y-1 text-left text-sm">
+                    <li className="flex gap-2">
+                      <span className="font-bold">1.</span>
+                      <span className="text-gray-700">Click the hand with higher equity (better chance of winning).</span>
                     </li>
-                    <li className="flex gap-3">
-                      <span className="font-bold text-xl">2.</span>
-                      <span className="text-gray-700">
-                        Click on the hand you think has higher equity (better chance of winning).
-                      </span>
+                    <li className="flex gap-2">
+                      <span className="font-bold">2.</span>
+                      <span className="text-gray-700">You start with 10s, time decreases as your streak grows.</span>
                     </li>
-                    <li className="flex gap-3">
-                      <span className="font-bold text-xl">3.</span>
-                      <span className="text-gray-700">
-                        You start with 10 seconds, but time decreases as your streak grows!
-                      </span>
-                    </li>
-                    <li className="flex gap-3">
-                      <span className="font-bold text-xl">4.</span>
-                      <span className="text-gray-700">
-                        Correct answers increase your streak. Wrong answer ends the game.
-                      </span>
-                    </li>
-                    <li className="flex gap-3">
-                      <span className="font-bold text-xl">5.</span>
-                      <span className="text-gray-700">
-                        Difficulty increases as your streak grows - hands get closer in equity!
-                      </span>
+                    <li className="flex gap-2">
+                      <span className="font-bold">3.</span>
+                      <span className="text-gray-700">Wrong answer or timeout ends the game.</span>
                     </li>
                   </ol>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
 
-            <Separator className="my-2" />
-
-            {/* Game Stages Info */}
-            <div className="text-center">
-              <p className="text-sm text-gray-600 font-medium mb-3">
-                <span className="font-bold">Game Stages:</span>
-              </p>
-              <div className="flex justify-center gap-6 text-sm">
-                <Badge variant="outline" className="px-3 py-1">
-                  <span className="font-bold">Pre-Flop</span>
-                  <span className="text-gray-500 ml-1">(0 cards)</span>
-                </Badge>
-                <Badge variant="outline" className="px-3 py-1">
-                  <span className="font-bold">Flop</span>
-                  <span className="text-gray-500 ml-1">(3 cards)</span>
-                </Badge>
-                <Badge variant="outline" className="px-3 py-1">
-                  <span className="font-bold">Turn</span>
-                  <span className="text-gray-500 ml-1">(4 cards)</span>
-                </Badge>
-              </div>
-            </div>
-
             {/* High Score Display */}
             {highScore > 0 && (
-              <>
-                <Separator className="my-2" />
-                <div className="text-center">
-                  <p className="text-sm text-gray-600">Your Best Streak</p>
-                  <Badge className="mt-2 text-2xl px-4 py-2 bg-yellow-500 hover:bg-yellow-600">
-                    {highScore}
-                  </Badge>
-                </div>
-              </>
+              <div className="text-center">
+                <p className="text-sm text-gray-600">Your Best Streak</p>
+                <Badge className="mt-1 text-xl px-3 py-1 bg-yellow-500 hover:bg-yellow-600">
+                  {highScore}
+                </Badge>
+              </div>
             )}
 
             {/* Start Button */}
-            <div className="text-center pt-4">
+            <div className="text-center pt-2">
               <Button
                 onClick={handleStartGame}
                 size="lg"
-                className="bg-black hover:bg-gray-900 text-white text-xl font-bold border-2 border-black px-12 py-8 uppercase tracking-wider transform hover:scale-105 transition-all"
+                className="bg-black hover:bg-gray-900 text-white text-xl font-bold border-2 border-black px-12 py-6 uppercase tracking-wider transform hover:scale-105 transition-all"
               >
                 Start Game
               </Button>
             </div>
 
             {/* Bottom decoration */}
-            <div className="flex justify-center gap-2 pt-4 text-2xl">
+            <div className="flex justify-center gap-2 pt-2 text-xl">
               <span>♥</span>
               <span>♦</span>
               <span>♣</span>
@@ -625,37 +591,45 @@ function App() {
                 </Alert>
               )}
               {gameState === 'incorrect' && gameOver && (
-                <Alert variant="destructive" className="border-2">
-                  <AlertTitle className="text-center text-3xl mb-4">
-                    Game Over!
-                  </AlertTitle>
-                  <AlertDescription className="space-y-4">
-                    <p className="text-lg text-center">
-                      {timeLeft === 0 ? "Time's up!" : "Wrong choice!"}
-                    </p>
-                    <div className="text-center space-y-2">
-                      <Badge variant="outline" className="text-xl px-4 py-2">
-                        Final Streak: {streak}
-                      </Badge>
-                      {streak > highScore && (
-                        <div>
-                          <Badge className="text-lg px-4 py-2 bg-green-600">
-                            🎉 New High Score!
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
-                    <div className="text-center pt-2">
-                      <Button
-                        onClick={handleRestart}
-                        size="lg"
-                        className="bg-black hover:bg-gray-900 text-white text-lg font-bold border-2 border-black px-8 py-6"
-                      >
-                        Restart
-                      </Button>
-                    </div>
-                  </AlertDescription>
-                </Alert>
+                <div className="space-y-4">
+                  <Alert variant="destructive" className="border-2">
+                    <AlertTitle className="text-center text-3xl mb-4">
+                      Game Over!
+                    </AlertTitle>
+                    <AlertDescription className="space-y-4">
+                      <p className="text-lg text-center">
+                        {timeLeft === 0 ? "Time's up!" : "Wrong choice!"}
+                      </p>
+                      <div className="text-center space-y-2">
+                        <Badge variant="outline" className="text-xl px-4 py-2">
+                          Final Streak: {streak}
+                        </Badge>
+                        {streak > highScore && (
+                          <div>
+                            <Badge className="text-lg px-4 py-2 bg-green-600">
+                              New High Score!
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-center pt-2">
+                        <Button
+                          onClick={handleRestart}
+                          size="lg"
+                          className="bg-black hover:bg-gray-900 text-white text-lg font-bold border-2 border-black px-8 py-6"
+                        >
+                          Restart
+                        </Button>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                  <Leaderboard
+                    key={leaderboardKey}
+                    currentScore={streak}
+                    showSubmitForm={true}
+                    onScoreSubmitted={() => setLeaderboardKey(prev => prev + 1)}
+                  />
+                </div>
               )}
             </div>
           </div>
