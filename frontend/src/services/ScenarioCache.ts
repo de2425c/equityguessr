@@ -18,10 +18,20 @@ interface Scenario {
   hand2_equity?: number;
 }
 
+interface EquityResult {
+  equities: number[];
+  wins: number[];
+  ties: number[];
+  hands_evaluated: number;
+  speed: number;
+  enumerated_all: boolean;
+}
+
 interface CacheEntry {
   scenario: Scenario;
   timestamp: number;
   used: boolean;
+  equityResult?: EquityResult;
 }
 
 interface FetchRequest {
@@ -33,8 +43,8 @@ export class ScenarioCache {
   private cache: Map<number, CacheEntry[]> = new Map();
   private activeRequests: Map<number, FetchRequest> = new Map();
   private readonly API_URL: string;
-  private readonly CACHE_SIZE_PER_LEVEL = 3; // Number of scenarios to cache per difficulty level
-  private readonly PREFETCH_LEVELS_AHEAD = 3; // How many levels ahead to prefetch
+  private readonly CACHE_SIZE_PER_LEVEL = 2; // Number of scenarios to cache per difficulty level
+  private readonly PREFETCH_LEVELS_AHEAD = 1; // How many levels ahead to prefetch
   private readonly MAX_CACHE_AGE_MS = 5 * 60 * 1000; // 5 minutes
 
   constructor(apiUrl: string) {
@@ -42,10 +52,10 @@ export class ScenarioCache {
   }
 
   /**
-   * Get a scenario for the given streak level.
+   * Get a scenario for the given streak level with pre-calculated equity if available.
    * First tries cache, then fetches if needed.
    */
-  async getScenario(streak: number): Promise<Scenario | null> {
+  async getScenario(streak: number): Promise<{ scenario: Scenario | null; equityResult?: EquityResult }> {
     // Try to get from cache first
     const cached = this.getFromCache(streak);
     if (cached) {
@@ -65,7 +75,7 @@ export class ScenarioCache {
       this.prefetchUpcomingLevels(streak);
     }
 
-    return scenario;
+    return { scenario, equityResult: undefined };
   }
 
   /**
@@ -84,9 +94,9 @@ export class ScenarioCache {
   }
 
   /**
-   * Get a scenario from cache if available
+   * Get a scenario from cache if available (with pre-calculated equity if available)
    */
-  private getFromCache(streak: number): Scenario | null {
+  getFromCache(streak: number): { scenario: Scenario; equityResult?: EquityResult } | null {
     const entries = this.cache.get(streak) || [];
 
     // Find an unused, non-stale entry
@@ -97,7 +107,10 @@ export class ScenarioCache {
 
     if (validEntry) {
       validEntry.used = true;
-      return validEntry.scenario;
+      return {
+        scenario: validEntry.scenario,
+        equityResult: validEntry.equityResult
+      };
     }
 
     return null;
@@ -147,7 +160,7 @@ export class ScenarioCache {
   }
 
   /**
-   * Add a scenario to the cache
+   * Add a scenario to the cache with equity from scenario response
    */
   private addToCache(streak: number, scenario: Scenario): void {
     const entries = this.cache.get(streak) || [];
@@ -157,12 +170,29 @@ export class ScenarioCache {
       (Date.now() - entry.timestamp) < this.MAX_CACHE_AGE_MS
     );
 
-    // Add new entry
-    validEntries.push({
+    // Create equity result from scenario's embedded equity values
+    const equityResult: EquityResult | undefined =
+      (scenario.hand1_equity !== undefined && scenario.hand2_equity !== undefined)
+        ? {
+            equities: [scenario.hand1_equity, scenario.hand2_equity],
+            wins: [0, 0],
+            ties: [0],
+            hands_evaluated: 0,
+            speed: 0,
+            enumerated_all: true
+          }
+        : undefined;
+
+    // Create new entry
+    const newEntry: CacheEntry = {
       scenario,
       timestamp: Date.now(),
-      used: false
-    });
+      used: false,
+      equityResult
+    };
+
+    // Add new entry
+    validEntries.push(newEntry);
 
     // Keep only the most recent entries up to cache size
     if (validEntries.length > this.CACHE_SIZE_PER_LEVEL * 2) {
@@ -173,27 +203,15 @@ export class ScenarioCache {
   }
 
   /**
-   * Prefetch scenarios for a specific level
+   * Prefetch scenarios for a specific level - ensures at least 1 scenario is cached
    */
   private async prefetchForLevel(streak: number): Promise<void> {
     const entries = this.cache.get(streak) || [];
     const unusedCount = entries.filter(e => !e.used && (Date.now() - e.timestamp) < this.MAX_CACHE_AGE_MS).length;
 
-    // Only prefetch if we're running low on unused scenarios
-    if (unusedCount < 2) {
-      // Fetch multiple scenarios in parallel
-      const fetchCount = this.CACHE_SIZE_PER_LEVEL - unusedCount;
-      const promises: Promise<Scenario | null>[] = [];
-
-      for (let i = 0; i < fetchCount; i++) {
-        // Stagger the requests slightly to avoid overwhelming the server
-        promises.push(
-          new Promise(resolve => setTimeout(() => resolve(this.fetchScenario(streak)), i * 50))
-        );
-      }
-
-      // Fire and forget - we don't wait for these
-      Promise.all(promises).catch(error =>
+    // Only fetch if cache is empty for this level
+    if (unusedCount === 0) {
+      this.fetchScenario(streak).catch(error =>
         console.error(`Error prefetching for streak ${streak}:`, error)
       );
     }
@@ -213,7 +231,7 @@ export class ScenarioCache {
         !e.used && (Date.now() - e.timestamp) < this.MAX_CACHE_AGE_MS
       ).length;
 
-      if (validCount < 2) {
+      if (validCount < 5) {
         // Start prefetching in background (fire and forget)
         this.fillCacheForLevel(targetStreak).catch(error =>
           console.error(`Error prefetching level ${targetStreak}:`, error)
@@ -223,7 +241,7 @@ export class ScenarioCache {
   }
 
   /**
-   * Fill the cache for a specific level
+   * Fill the cache for a specific level - fetches 1 scenario if cache is empty
    */
   private async fillCacheForLevel(streak: number): Promise<void> {
     const entries = this.cache.get(streak) || [];
@@ -231,35 +249,11 @@ export class ScenarioCache {
       !e.used && (Date.now() - e.timestamp) < this.MAX_CACHE_AGE_MS
     ).length;
 
-    const needed = Math.max(0, this.CACHE_SIZE_PER_LEVEL - validCount);
-    if (needed === 0) return;
+    // Only fetch if we have nothing for this level
+    if (validCount > 0) return;
 
-    const promises: Promise<Scenario | null>[] = [];
-
-    for (let i = 0; i < needed; i++) {
-      // Stagger requests by 50ms each
-      promises.push(
-        new Promise(resolve =>
-          setTimeout(async () => {
-            try {
-              const response = await fetch(`${this.API_URL}/scenario?streak=${streak}`);
-              if (response.ok) {
-                const data = await response.json();
-                this.addToCache(streak, data);
-                resolve(data);
-              } else {
-                resolve(null);
-              }
-            } catch (error) {
-              console.error(`Error fetching scenario: ${error}`);
-              resolve(null);
-            }
-          }, i * 50)
-        )
-      );
-    }
-
-    await Promise.all(promises);
+    // Fetch single scenario directly (no stagger needed)
+    await this.fetchScenario(streak);
   }
 
   /**

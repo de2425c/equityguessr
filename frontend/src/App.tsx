@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PlayingCard } from './components/PlayingCard';
-import { Card, CardContent } from './components/ui/card';
 import { Button } from './components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
+import { Progress } from './components/ui/progress';
+import { Alert, AlertDescription, AlertTitle } from './components/ui/alert';
+import { Badge } from './components/ui/badge';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './components/ui/accordion';
+import { Skeleton } from './components/ui/skeleton';
+import { Separator } from './components/ui/separator';
 import { cn } from './lib/utils';
 import { ScenarioCache } from './services/ScenarioCache';
 
@@ -29,11 +35,10 @@ interface EquityResult {
   enumerated_all: boolean;
 }
 
-type GameState = 'loading' | 'playing' | 'correct' | 'incorrect';
+type GameState = 'not-started' | 'loading' | 'playing' | 'correct' | 'incorrect';
 
-// Get API URLs from environment variables
+// Get API URL from environment variables
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080';
 
 // Map single-letter suit codes to full names
 const mapSuit = (suit: string): 'hearts' | 'diamonds' | 'clubs' | 'spades' => {
@@ -52,7 +57,7 @@ const mapSuit = (suit: string): 'hearts' | 'diamonds' | 'clubs' | 'spades' => {
 
 function App() {
   const [currentScenario, setCurrentScenario] = useState<Scenario | null>(null);
-  const [gameState, setGameState] = useState<GameState>('loading');
+  const [gameState, setGameState] = useState<GameState>('not-started');
   const [equityResult, setEquityResult] = useState<EquityResult | null>(null);
   const [streak, setStreak] = useState(0);
   const [highScore, setHighScore] = useState(() => {
@@ -60,9 +65,10 @@ function App() {
     const saved = localStorage.getItem('pokerEquityHighScore');
     return saved ? parseInt(saved, 10) : 0;
   });
-  const [loading, setLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(10);
   const [gameOver, setGameOver] = useState(false);
+  const [gameStarted, setGameStarted] = useState(false);
+  const [scenarioId, setScenarioId] = useState(0);
 
   // Initialize scenario cache
   const scenarioCacheRef = useRef<ScenarioCache | null>(null);
@@ -79,20 +85,31 @@ function App() {
 
   // Fetch a new scenario using the cache
   const fetchScenario = async () => {
-    setLoading(true);
     setGameState('loading');
     try {
       // Get scenario from cache (it will handle prefetching automatically)
-      const data = await scenarioCacheRef.current!.getScenario(streak);
+      const { scenario, equityResult } = await scenarioCacheRef.current!.getScenario(streak);
 
-      if (!data) {
+      if (!scenario) {
         throw new Error('Failed to fetch scenario');
       }
 
-      setCurrentScenario(data);
+      setCurrentScenario(scenario);
+      setScenarioId(prev => prev + 1);
 
-      // Calculate equity for this scenario
-      await calculateEquity(data);
+      // Use equity from scenario (already embedded in API response)
+      if (equityResult) {
+        setEquityResult(equityResult);
+      } else if (scenario.hand1_equity !== undefined && scenario.hand2_equity !== undefined) {
+        setEquityResult({
+          equities: [scenario.hand1_equity, scenario.hand2_equity],
+          wins: [0, 0],
+          ties: [0],
+          hands_evaluated: 0,
+          speed: 0,
+          enumerated_all: true
+        });
+      }
 
       setTimeLeft(10);
       setGameState('playing');
@@ -109,66 +126,28 @@ function App() {
           { rank: 'Q', suit: 'c', code: 'Qc' }
         ],
         community: [],
-        stage: 'preflop'
+        stage: 'preflop',
+        hand1_equity: 0.65,
+        hand2_equity: 0.35
+      });
+      setEquityResult({
+        equities: [0.65, 0.35],
+        wins: [0, 0],
+        ties: [0],
+        hands_evaluated: 0,
+        speed: 0,
+        enumerated_all: true
       });
       setGameState('playing');
-    } finally {
-      setLoading(false);
     }
   };
 
-  const calculateEquity = async (scenario: Scenario) => {
-    try {
-      const hand1Code = scenario.hand1.map(c => c.code).join('');
-      const hand2Code = scenario.hand2.map(c => c.code).join('');
-      const boardCode = scenario.community.map(c => c.code).join('');
-
-      const response = await fetch(`${BACKEND_URL}/equity`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          hands: [hand1Code, hand2Code],
-          board: boardCode || undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to calculate equity');
-      }
-
-      const data = await response.json();
-      setEquityResult(data);
-    } catch (err) {
-      console.error('Error calculating equity:', err);
-      // Use precomputed equity if available
-      if (scenario.hand1_equity && scenario.hand2_equity) {
-        setEquityResult({
-          equities: [scenario.hand1_equity, scenario.hand2_equity],
-          wins: [0, 0],
-          ties: [0],
-          hands_evaluated: 0,
-          speed: 0,
-          enumerated_all: false
-        });
-      }
-    }
-  };
-
-  // Fetch initial scenario on mount and prefetch upcoming levels
+  // Fetch initial scenario when game starts
   useEffect(() => {
-    const initializeGame = async () => {
-      // Start prefetching for the first few levels in the background
-      // This runs in parallel with the first scenario fetch
-      scenarioCacheRef.current!.prefetchMultipleLevels(0, 5).catch(err =>
-        console.error('Error prefetching initial scenarios:', err)
-      );
-
-      // Fetch the first scenario
-      await fetchScenario();
-    };
-
-    initializeGame();
-  }, []);
+    if (!gameStarted) return;
+    // Just fetch first scenario - cache should already have it from mount prefetch
+    fetchScenario();
+  }, [gameStarted]);
 
   // Countdown timer
   useEffect(() => {
@@ -187,6 +166,18 @@ function App() {
 
     return () => clearInterval(timer);
   }, [timeLeft, gameState, gameOver]);
+
+  // Auto-progress after correct answer
+  useEffect(() => {
+    if (gameState === 'correct' && !gameOver) {
+      const timer = setTimeout(() => {
+        setGameState('loading');
+        fetchScenario();
+      }, 1500); // 1.5 second delay to show the result
+
+      return () => clearTimeout(timer);
+    }
+  }, [gameState, gameOver]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleHandClick = (handNumber: 1 | 2) => {
     if (gameState !== 'playing' || !equityResult || gameOver) return;
@@ -211,22 +202,43 @@ function App() {
       }
     } else {
       // Correct answer - increment streak
-      setStreak(prev => prev + 1);
-    }
-  };
+      setStreak(prev => {
+        const newStreak = prev + 1;
 
-  const handleNextHand = () => {
-    setGameState('loading');
-    fetchScenario();
+        // Prefetch just the next level ahead
+        scenarioCacheRef.current!.prefetchMultipleLevels(newStreak + 1, 1).catch(err =>
+          console.debug('Post-answer prefetch:', err)
+        );
+
+        return newStreak;
+      });
+    }
   };
 
   const handleRestart = () => {
     setStreak(0);
-    setGameState('loading');
+    setGameState('not-started');
     setGameOver(false);
     setTimeLeft(10);
-    fetchScenario();
+    setGameStarted(false);
+    setCurrentScenario(null);
+    setEquityResult(null);
   };
+
+  const handleStartGame = () => {
+    setGameStarted(true);
+    setGameState('loading');
+  };
+
+  // Prefetch first 3 levels on mount (while user reads instructions)
+  useEffect(() => {
+    if (!scenarioCacheRef.current) return;
+
+    // Prefetch levels 0, 1, 2 - just 3 scenarios total
+    scenarioCacheRef.current.prefetchMultipleLevels(0, 3).catch(err =>
+      console.debug('Background prefetch:', err)
+    );
+  }, []);
 
   // Calculate difficulty display
   const currentDifficulty = calculateDifficulty(streak);
@@ -248,74 +260,236 @@ function App() {
     }
   };
 
+  // Show start screen if game hasn't started
+  if (gameState === 'not-started') {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+        <Card className="border-4 border-black max-w-2xl shadow-2xl">
+          <CardHeader className="text-center pb-8">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="text-6xl">♠</div>
+              <CardTitle className="text-5xl font-extrabold tracking-tight uppercase">
+                EquityGuesser
+              </CardTitle>
+              <div className="text-6xl">♣</div>
+            </div>
+            <CardDescription className="text-lg text-gray-600 font-semibold">
+              Test your poker hand evaluation skills!
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+
+            {/* How to Play Section */}
+            <Accordion type="single" collapsible defaultValue="how-to-play" className="w-full">
+              <AccordionItem value="how-to-play" className="border-2 border-gray-200">
+                <AccordionTrigger className="text-2xl font-bold hover:no-underline px-6">
+                  How to Play
+                </AccordionTrigger>
+                <AccordionContent className="px-6 pb-6">
+                  <ol className="space-y-3 text-left">
+                    <li className="flex gap-3">
+                      <span className="font-bold text-xl">1.</span>
+                      <span className="text-gray-700">
+                        You'll see two poker hands and the community cards (board).
+                      </span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="font-bold text-xl">2.</span>
+                      <span className="text-gray-700">
+                        Click on the hand you think has higher equity (better chance of winning).
+                      </span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="font-bold text-xl">3.</span>
+                      <span className="text-gray-700">
+                        You have 10 seconds to make your choice - think fast!
+                      </span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="font-bold text-xl">4.</span>
+                      <span className="text-gray-700">
+                        Correct answers increase your streak. Wrong answer ends the game.
+                      </span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="font-bold text-xl">5.</span>
+                      <span className="text-gray-700">
+                        Difficulty increases as your streak grows - hands get closer in equity!
+                      </span>
+                    </li>
+                  </ol>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+
+            <Separator className="my-2" />
+
+            {/* Game Stages Info */}
+            <div className="text-center">
+              <p className="text-sm text-gray-600 font-medium mb-3">
+                <span className="font-bold">Game Stages:</span>
+              </p>
+              <div className="flex justify-center gap-6 text-sm">
+                <Badge variant="outline" className="px-3 py-1">
+                  <span className="font-bold">Pre-Flop</span>
+                  <span className="text-gray-500 ml-1">(0 cards)</span>
+                </Badge>
+                <Badge variant="outline" className="px-3 py-1">
+                  <span className="font-bold">Flop</span>
+                  <span className="text-gray-500 ml-1">(3 cards)</span>
+                </Badge>
+                <Badge variant="outline" className="px-3 py-1">
+                  <span className="font-bold">Turn</span>
+                  <span className="text-gray-500 ml-1">(4 cards)</span>
+                </Badge>
+              </div>
+            </div>
+
+            {/* High Score Display */}
+            {highScore > 0 && (
+              <>
+                <Separator className="my-2" />
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">Your Best Streak</p>
+                  <Badge className="mt-2 text-2xl px-4 py-2 bg-yellow-500 hover:bg-yellow-600">
+                    {highScore}
+                  </Badge>
+                </div>
+              </>
+            )}
+
+            {/* Start Button */}
+            <div className="text-center pt-4">
+              <Button
+                onClick={handleStartGame}
+                size="lg"
+                className="bg-black hover:bg-gray-900 text-white text-xl font-bold border-2 border-black px-12 py-8 uppercase tracking-wider transform hover:scale-105 transition-all"
+              >
+                Start Game
+              </Button>
+            </div>
+
+            {/* Bottom decoration */}
+            <div className="flex justify-center gap-2 pt-4 text-2xl">
+              <span>♥</span>
+              <span>♦</span>
+              <span>♣</span>
+              <span>♠</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (!currentScenario) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-2xl font-bold animate-pulse">Loading game...</div>
+      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+        <Card className="border-2 border-black w-full max-w-4xl">
+          <CardHeader>
+            <div className="flex items-center justify-center gap-3">
+              <Skeleton className="h-10 w-10 rounded-full" />
+              <Skeleton className="h-10 w-48" />
+              <Skeleton className="h-10 w-10 rounded-full" />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex justify-center gap-2">
+              <Skeleton className="h-32 w-24 rounded-lg" />
+              <Skeleton className="h-32 w-24 rounded-lg" />
+              <Skeleton className="h-32 w-24 rounded-lg" />
+              <Skeleton className="h-32 w-24 rounded-lg" />
+              <Skeleton className="h-32 w-24 rounded-lg" />
+            </div>
+            <Separator />
+            <div className="flex justify-around">
+              <div className="flex gap-2">
+                <Skeleton className="h-32 w-24 rounded-lg" />
+                <Skeleton className="h-32 w-24 rounded-lg" />
+              </div>
+              <div className="flex gap-2">
+                <Skeleton className="h-32 w-24 rounded-lg" />
+                <Skeleton className="h-32 w-24 rounded-lg" />
+              </div>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-semibold animate-pulse">Loading game...</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
-      <div className="flex gap-8 items-center h-screen py-4">
-        {/* Main Game Container */}
-        <div className="bg-white border-2 border-black h-full flex flex-col" style={{ width: '850px' }}>
-          {/* Header Section */}
-          <div className="bg-black px-10 py-6 border-b-2 border-black">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="text-white text-3xl">♠</div>
-                <h1 className="text-3xl font-extrabold text-white tracking-tight uppercase">
-                  EquityGuesser
-                </h1>
+    <div className="min-h-screen bg-white flex items-center justify-center p-4">
+      {/* Main Game Container */}
+      <Card className="border-4 border-black w-full max-w-5xl shadow-2xl">
+        {/* Header Section */}
+        <CardHeader className="bg-black rounded-t-none border-b-2 border-black">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="text-white text-3xl">♠</div>
+              <CardTitle className="text-3xl font-extrabold text-white tracking-tight uppercase">
+                EquityGuesser
+              </CardTitle>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="text-center">
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Streak</div>
+                <Badge variant="secondary" className="text-2xl px-4 py-2 bg-white text-black">
+                  {streak}
+                </Badge>
               </div>
-              <div className="flex items-center gap-8">
-                <div className="text-center">
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Streak</div>
-                  <div className="text-3xl font-bold text-white">{streak}</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Best</div>
-                  <div className="text-2xl font-bold text-yellow-400">{highScore}</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Time</div>
-                  <div className={cn(
-                    "text-3xl font-bold",
-                    timeLeft <= 3 ? "text-red-500" : "text-white"
-                  )}>{timeLeft}s</div>
-                </div>
+              <div className="text-center">
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Best</div>
+                <Badge className="text-xl px-3 py-1 bg-yellow-500 hover:bg-yellow-600">
+                  {highScore}
+                </Badge>
+              </div>
+              <div className="text-center">
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Time</div>
+                <Badge
+                  variant={timeLeft <= 3 ? "destructive" : "secondary"}
+                  className={cn(
+                    "text-2xl px-4 py-2",
+                    timeLeft <= 3 ? "" : "bg-white text-black"
+                  )}
+                >
+                  {timeLeft}s
+                </Badge>
               </div>
             </div>
           </div>
+        </CardHeader>
 
-          {/* Difficulty Indicator */}
-          <div className="px-10 py-3 bg-gray-100 border-b border-gray-300">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">Stage: {getStageDisplay()}</span>
-                <span className="text-xs text-gray-500">•</span>
-                <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-                  Difficulty: {difficultyPercent}%
-                </span>
-              </div>
-              <div className="w-32 h-2 bg-gray-300 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 transition-all duration-500"
-                  style={{ width: `${difficultyPercent}%` }}
-                />
-              </div>
+        {/* Difficulty Indicator */}
+        <div className="px-8 py-4 bg-gray-100 border-b border-gray-300">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Badge variant="outline" className="text-xs font-bold uppercase">
+                Stage: {getStageDisplay()}
+              </Badge>
+              <Separator orientation="vertical" className="h-4" />
+              <Badge variant="outline" className="text-xs font-bold uppercase">
+                Difficulty: {difficultyPercent}%
+              </Badge>
             </div>
+            <Progress
+              value={difficultyPercent}
+              className="w-32 h-2"
+            />
           </div>
+        </div>
 
+        <CardContent className="p-0">
           {/* Community Cards Section */}
           <div className="px-10 py-8 bg-white border-b-2 border-black">
             <div className="text-sm font-bold text-gray-500 uppercase tracking-widest text-center mb-6">
               Community Board
             </div>
             <div className="flex justify-center items-center">
-              <div className="flex gap-2">
+              <div key={`community-${scenarioId}`} className="flex gap-2">
                 {/* Always show exactly 5 cards */}
                 {/* Show revealed cards first */}
                 {currentScenario.community.map((card, idx) => (
@@ -349,7 +523,9 @@ function App() {
                 )}
                 onClick={() => handleHandClick(1)}
               >
-                <div className={cn(
+                <div
+                  key={`hand1-${scenarioId}`}
+                  className={cn(
                   "flex justify-center gap-1",
                   gameState === 'correct' && equityResult && equityResult.equities[0] > equityResult.equities[1] && 'ring-4 ring-black rounded-lg p-1',
                   gameState === 'incorrect' && equityResult && equityResult.equities[0] > equityResult.equities[1] && 'ring-4 ring-black rounded-lg p-1',
@@ -384,7 +560,9 @@ function App() {
                 )}
                 onClick={() => handleHandClick(2)}
               >
-                <div className={cn(
+                <div
+                  key={`hand2-${scenarioId}`}
+                  className={cn(
                   "flex justify-center gap-1",
                   gameState === 'correct' && equityResult && equityResult.equities[1] > equityResult.equities[0] && 'ring-4 ring-black rounded-lg p-1',
                   gameState === 'incorrect' && equityResult && equityResult.equities[1] > equityResult.equities[0] && 'ring-4 ring-black rounded-lg p-1',
@@ -408,60 +586,68 @@ function App() {
             </div>
 
             {/* Instructions/Feedback */}
-            <div className="text-center py-4">
+            <div className="text-center py-4 px-10">
               {gameState === 'loading' && (
-                <p className="text-sm text-gray-500 animate-pulse">Loading next hand...</p>
+                <Alert className="border-gray-300 bg-gray-50">
+                  <AlertDescription className="text-center animate-pulse">
+                    Loading next hand...
+                  </AlertDescription>
+                </Alert>
               )}
               {gameState === 'playing' && !gameOver && (
-                <p className="text-sm text-gray-600 font-medium">
-                  Click on the hand you think has more equity
-                </p>
+                <Alert className="border-blue-200 bg-blue-50">
+                  <AlertDescription className="text-center font-medium">
+                    Click on the hand you think has more equity
+                  </AlertDescription>
+                </Alert>
               )}
               {gameState === 'correct' && !gameOver && (
-                <div className="flex items-center justify-center gap-6 -mt-4">
-                  <div className="text-2xl text-green-600 font-bold">
+                <Alert className="border-green-500 bg-green-50">
+                  <AlertTitle className="text-center text-2xl text-green-600">
                     ✓ Correct!
-                  </div>
-                  <Button
-                    onClick={handleNextHand}
-                    size="lg"
-                    className="bg-green-500 hover:bg-green-600 text-white text-lg font-bold border-2 border-black px-8 py-6"
-                  >
-                    Next →
-                  </Button>
-                </div>
+                  </AlertTitle>
+                  <AlertDescription className="text-center text-gray-600 mt-2">
+                    Loading next hand...
+                  </AlertDescription>
+                </Alert>
               )}
               {gameState === 'incorrect' && gameOver && (
-                <div className="space-y-4">
-                  <p className="text-3xl text-red-600 font-bold">
+                <Alert variant="destructive" className="border-2">
+                  <AlertTitle className="text-center text-3xl mb-4">
                     Game Over!
-                  </p>
-                  <p className="text-lg text-gray-600">
-                    {timeLeft === 0 ? "Time's up!" : "Wrong choice!"}
-                  </p>
-                  <div className="space-y-2">
-                    <p className="text-xl font-bold text-black">
-                      Streak: {streak}
+                  </AlertTitle>
+                  <AlertDescription className="space-y-4">
+                    <p className="text-lg text-center">
+                      {timeLeft === 0 ? "Time's up!" : "Wrong choice!"}
                     </p>
-                    {streak > highScore && (
-                      <p className="text-lg text-green-600 font-bold">
-                        🎉 New High Score!
-                      </p>
-                    )}
-                  </div>
-                  <Button
-                    onClick={handleRestart}
-                    size="lg"
-                    className="bg-black hover:bg-gray-900 text-white text-lg font-bold border-2 border-black px-8 py-6"
-                  >
-                    Restart
-                  </Button>
-                </div>
+                    <div className="text-center space-y-2">
+                      <Badge variant="outline" className="text-xl px-4 py-2">
+                        Final Streak: {streak}
+                      </Badge>
+                      {streak > highScore && (
+                        <div>
+                          <Badge className="text-lg px-4 py-2 bg-green-600">
+                            🎉 New High Score!
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-center pt-2">
+                      <Button
+                        onClick={handleRestart}
+                        size="lg"
+                        className="bg-black hover:bg-gray-900 text-white text-lg font-bold border-2 border-black px-8 py-6"
+                      >
+                        Restart
+                      </Button>
+                    </div>
+                  </AlertDescription>
+                </Alert>
               )}
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface PlayingCardProps {
   rank?: string;
@@ -6,6 +6,24 @@ interface PlayingCardProps {
   size?: 'sm' | 'md' | 'lg';
   faceDown?: boolean;
 }
+
+// Preload all card images once
+const preloadedImages = new Set<string>();
+const preloadImage = (src: string) => {
+  if (preloadedImages.has(src)) return;
+  const img = new Image();
+  img.src = src;
+  preloadedImages.add(src);
+};
+
+// Preload all 52 cards on module load
+const ranks = ['ace', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'jack', 'queen', 'king'];
+const suits = ['hearts', 'diamonds', 'clubs', 'spades'];
+ranks.forEach(rank => {
+  suits.forEach(suit => {
+    preloadImage(`/SVG-cards-1.3/${rank}_of_${suit}.svg`);
+  });
+});
 
 // Map rank and suit to SVG filename
 const getCardFilename = (rank: string, suit: string): string => {
