@@ -12,6 +12,8 @@ import { Separator } from './components/ui/separator';
 import { cn } from './lib/utils';
 import { ScenarioCache } from './services/ScenarioCache';
 import { Leaderboard } from './components/Leaderboard';
+import { LeaderboardModal } from './components/LeaderboardModal';
+import { isScoreEligible } from './services/LeaderboardService';
 
 interface CardType {
   rank: string;
@@ -89,6 +91,7 @@ function App() {
   const [gameStarted, setGameStarted] = useState(false);
   const [scenarioId, setScenarioId] = useState(0);
   const [leaderboardKey, setLeaderboardKey] = useState(0);
+  const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
 
   // Initialize scenario cache
   const scenarioCacheRef = useRef<ScenarioCache | null>(null);
@@ -197,6 +200,18 @@ function App() {
     return () => clearInterval(timer);
   }, [timeLeft, gameState, gameOver]);
 
+  // Check leaderboard eligibility when game ends
+  useEffect(() => {
+    if (gameOver && streak > 0) {
+      isScoreEligible(streak).then((eligible) => {
+        if (eligible) {
+          // Small delay to let user see their final result first
+          setTimeout(() => setShowLeaderboardModal(true), 1000);
+        }
+      }).catch(console.error);
+    }
+  }, [gameOver, streak]);
+
   // Auto-progress after correct answer
   useEffect(() => {
     if (gameState === 'correct' && !gameOver) {
@@ -249,6 +264,7 @@ function App() {
     setStreak(0);
     setGameState('not-started');
     setGameOver(false);
+    setShowLeaderboardModal(false);
     setTimeLeft(10);
     setGameStarted(false);
     setCurrentScenario(null);
@@ -604,50 +620,49 @@ function App() {
                 </Alert>
               )}
               {gameState === 'incorrect' && gameOver && (
-                <div className="space-y-3 sm:space-y-4">
-                  <Alert variant="destructive" className="border-2">
-                    <AlertTitle className="text-center text-xl sm:text-3xl mb-2 sm:mb-4">
-                      Game Over!
-                    </AlertTitle>
-                    <AlertDescription className="space-y-3 sm:space-y-4">
-                      <p className="text-sm sm:text-lg text-center">
-                        {timeLeft === 0 ? "Time's up!" : "Wrong choice!"}
-                      </p>
-                      <div className="text-center space-y-2">
-                        <Badge variant="outline" className="text-base sm:text-xl px-3 sm:px-4 py-1 sm:py-2">
-                          Final Streak: {streak}
-                        </Badge>
-                        {streak > highScore && (
-                          <div>
-                            <Badge className="text-sm sm:text-lg px-3 sm:px-4 py-1 sm:py-2 bg-green-600">
-                              New High Score!
-                            </Badge>
-                          </div>
-                        )}
-                      </div>
-                      <div className="text-center pt-1 sm:pt-2">
-                        <Button
-                          onClick={handleRestart}
-                          size="lg"
-                          className="bg-black hover:bg-gray-900 text-white text-base sm:text-lg font-bold border-2 border-black px-6 sm:px-8 py-4 sm:py-6"
-                        >
-                          Restart
-                        </Button>
-                      </div>
-                    </AlertDescription>
-                  </Alert>
-                  <Leaderboard
-                    key={leaderboardKey}
-                    currentScore={streak}
-                    showSubmitForm={true}
-                    onScoreSubmitted={() => setLeaderboardKey(prev => prev + 1)}
-                  />
-                </div>
+                <Alert variant="destructive" className="border-2">
+                  <AlertTitle className="text-center text-xl sm:text-3xl mb-2 sm:mb-4">
+                    Game Over!
+                  </AlertTitle>
+                  <AlertDescription className="space-y-3 sm:space-y-4">
+                    <p className="text-sm sm:text-lg text-center">
+                      {timeLeft === 0 ? "Time's up!" : "Wrong choice!"}
+                    </p>
+                    <div className="text-center space-y-2">
+                      <Badge variant="outline" className="text-base sm:text-xl px-3 sm:px-4 py-1 sm:py-2">
+                        Final Streak: {streak}
+                      </Badge>
+                      {streak > highScore && (
+                        <div>
+                          <Badge className="text-sm sm:text-lg px-3 sm:px-4 py-1 sm:py-2 bg-green-600">
+                            New High Score!
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-center pt-1 sm:pt-2">
+                      <Button
+                        onClick={handleRestart}
+                        size="lg"
+                        className="bg-black hover:bg-gray-900 text-white text-base sm:text-lg font-bold border-2 border-black px-6 sm:px-8 py-4 sm:py-6"
+                      >
+                        Restart
+                      </Button>
+                    </div>
+                  </AlertDescription>
+                </Alert>
               )}
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Leaderboard Modal */}
+      <LeaderboardModal
+        open={showLeaderboardModal}
+        onClose={() => setShowLeaderboardModal(false)}
+        score={streak}
+      />
     </div>
     </>
   );
