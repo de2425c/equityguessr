@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { PlayingCard } from './components/PlayingCard';
 import { Button } from './components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
@@ -78,9 +79,19 @@ function App() {
 
   // Calculate difficulty based on streak
   const calculateDifficulty = (streak: number) => {
-    // Formula: 0.5 + 0.5 * e^(-0.1 * streak)
+    // Formula: 0.5 + 0.5 * e^(-0.25 * streak)
     // This gives the equity for the WEAKER hand
     return 0.5 + 0.5 * Math.exp(-0.25 * streak);
+  };
+
+  // Calculate time limit based on streak
+  // Decreases asymptotically from 10s to 5s, reaching ~6s at streak 15
+  const calculateTimeLimit = (streak: number) => {
+    // Formula: 5 + 5 * e^(-0.107 * streak)
+    // At streak 0: 10 seconds
+    // At streak 15: ~6 seconds
+    // Asymptote: 5 seconds
+    return Math.round(5 + 5 * Math.exp(-0.107 * streak));
   };
 
   // Fetch a new scenario using the cache
@@ -111,7 +122,7 @@ function App() {
         });
       }
 
-      setTimeLeft(10);
+      setTimeLeft(calculateTimeLimit(streak));
       setGameState('playing');
     } catch (err) {
       console.error('Error fetching scenario:', err);
@@ -302,7 +313,7 @@ function App() {
                     <li className="flex gap-3">
                       <span className="font-bold text-xl">3.</span>
                       <span className="text-gray-700">
-                        You have 10 seconds to make your choice - think fast!
+                        You start with 10 seconds, but time decreases as your streak grows!
                       </span>
                     </li>
                     <li className="flex gap-3">
@@ -422,6 +433,8 @@ function App() {
   }
 
   return (
+    <>
+    <Analytics />
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
       {/* Main Game Container */}
       <Card className="border-4 border-black w-full max-w-5xl shadow-2xl">
@@ -649,6 +662,7 @@ function App() {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }
 
