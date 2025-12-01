@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { PlayingCard } from './components/PlayingCard';
 import { Button } from './components/ui/button';
@@ -57,7 +57,24 @@ const mapSuit = (suit: string): 'hearts' | 'diamonds' | 'clubs' | 'spades' => {
   return suitMap[suit.toLowerCase()] || 'hearts';
 };
 
+// Hook to detect mobile screen
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+}
+
 function App() {
+  const isMobile = useIsMobile();
+  const cardSize = isMobile ? 'sm' : 'md';
+
   const [currentScenario, setCurrentScenario] = useState<Scenario | null>(null);
   const [gameState, setGameState] = useState<GameState>('not-started');
   const [equityResult, setEquityResult] = useState<EquityResult | null>(null);
@@ -277,46 +294,46 @@ function App() {
   if (gameState === 'not-started') {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-2 sm:p-4">
-        <Card className="border-2 sm:border-4 border-black w-full max-w-md sm:max-w-lg shadow-2xl">
-          <CardHeader className="text-center pb-4 sm:pb-6 px-3 sm:px-6">
+        <Card className="border-2 sm:border-4 border-black w-full max-w-md sm:max-w-2xl shadow-2xl">
+          <CardHeader className="text-center pb-4 sm:pb-8 px-3 sm:px-6">
             <div className="flex items-center justify-center gap-2 sm:gap-3 mb-2 sm:mb-4">
-              <div className="text-3xl sm:text-5xl">♠</div>
-              <CardTitle className="text-2xl sm:text-4xl font-extrabold tracking-tight uppercase">
+              <div className="text-3xl sm:text-6xl">♠</div>
+              <CardTitle className="text-2xl sm:text-5xl font-extrabold tracking-tight uppercase">
                 EquityGuesser
               </CardTitle>
-              <div className="text-3xl sm:text-5xl">♣</div>
+              <div className="text-3xl sm:text-6xl">♣</div>
             </div>
-            <CardDescription className="text-sm sm:text-base text-gray-600 font-semibold">
+            <CardDescription className="text-sm sm:text-lg text-gray-600 font-semibold">
               Test your poker hand evaluation skills!
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6">
+          <CardContent className="space-y-3 sm:space-y-6 px-3 sm:px-6">
 
             {/* Leaderboard & How to Play Accordions */}
             <Accordion type="single" collapsible className="w-full space-y-2">
-              <AccordionItem value="leaderboard" className="border border-gray-200">
-                <AccordionTrigger className="text-base font-bold hover:no-underline px-3 py-2">
+              <AccordionItem value="leaderboard" className="border sm:border-2 border-gray-200">
+                <AccordionTrigger className="text-base sm:text-xl font-bold hover:no-underline px-3 sm:px-6 py-2">
                   Leaderboard
                 </AccordionTrigger>
-                <AccordionContent className="px-3 pb-3">
+                <AccordionContent className="px-3 sm:px-6 pb-3 sm:pb-6">
                   <Leaderboard compact />
                 </AccordionContent>
               </AccordionItem>
-              <AccordionItem value="how-to-play" className="border border-gray-200">
-                <AccordionTrigger className="text-base font-bold hover:no-underline px-3 py-2">
+              <AccordionItem value="how-to-play" className="border sm:border-2 border-gray-200">
+                <AccordionTrigger className="text-base sm:text-xl font-bold hover:no-underline px-3 sm:px-6 py-2">
                   How to Play
                 </AccordionTrigger>
-                <AccordionContent className="px-3 pb-3">
-                  <ol className="space-y-1 text-left text-xs sm:text-sm">
-                    <li className="flex gap-2">
+                <AccordionContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                  <ol className="space-y-1 sm:space-y-3 text-left text-xs sm:text-base">
+                    <li className="flex gap-2 sm:gap-3">
                       <span className="font-bold">1.</span>
-                      <span className="text-gray-700">Click the hand with higher equity.</span>
+                      <span className="text-gray-700">Click the hand with higher equity (better chance of winning).</span>
                     </li>
-                    <li className="flex gap-2">
+                    <li className="flex gap-2 sm:gap-3">
                       <span className="font-bold">2.</span>
                       <span className="text-gray-700">Time decreases as your streak grows.</span>
                     </li>
-                    <li className="flex gap-2">
+                    <li className="flex gap-2 sm:gap-3">
                       <span className="font-bold">3.</span>
                       <span className="text-gray-700">Wrong answer or timeout ends the game.</span>
                     </li>
@@ -329,25 +346,25 @@ function App() {
             {highScore > 0 && (
               <div className="text-center">
                 <p className="text-xs sm:text-sm text-gray-600">Your Best Streak</p>
-                <Badge className="mt-1 text-lg sm:text-xl px-3 py-1 bg-yellow-500 hover:bg-yellow-600">
+                <Badge className="mt-1 sm:mt-2 text-lg sm:text-2xl px-3 sm:px-4 py-1 sm:py-2 bg-yellow-500 hover:bg-yellow-600">
                   {highScore}
                 </Badge>
               </div>
             )}
 
             {/* Start Button */}
-            <div className="text-center pt-2">
+            <div className="text-center pt-2 sm:pt-4">
               <Button
                 onClick={handleStartGame}
                 size="lg"
-                className="bg-black hover:bg-gray-900 text-white text-lg sm:text-xl font-bold border-2 border-black px-8 sm:px-12 py-5 sm:py-6 uppercase tracking-wider transform hover:scale-105 transition-all"
+                className="bg-black hover:bg-gray-900 text-white text-lg sm:text-xl font-bold border-2 border-black px-8 sm:px-12 py-5 sm:py-8 uppercase tracking-wider transform hover:scale-105 transition-all"
               >
                 Start Game
               </Button>
             </div>
 
             {/* Bottom decoration */}
-            <div className="flex justify-center gap-2 pt-2 text-lg sm:text-xl">
+            <div className="flex justify-center gap-2 pt-2 sm:pt-4 text-lg sm:text-2xl">
               <span>♥</span>
               <span>♦</span>
               <span>♣</span>
@@ -409,25 +426,25 @@ function App() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1 sm:gap-3">
               <div className="text-white text-xl sm:text-3xl">♠</div>
-              <CardTitle className="text-base sm:text-2xl font-extrabold text-white tracking-tight uppercase">
+              <CardTitle className="text-base sm:text-3xl font-extrabold text-white tracking-tight uppercase">
                 EquityGuesser
               </CardTitle>
             </div>
             <div className="flex items-center gap-2 sm:gap-6">
               <div className="text-center">
-                <div className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider sm:tracking-widest mb-1">Streak</div>
+                <div className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider sm:tracking-widest mb-1 sm:mb-2">Streak</div>
                 <Badge variant="secondary" className="text-lg sm:text-2xl px-2 sm:px-4 py-1 sm:py-2 bg-white text-black">
                   {streak}
                 </Badge>
               </div>
               <div className="text-center hidden sm:block">
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Best</div>
-                <Badge className="text-lg px-2 py-1 bg-yellow-500 hover:bg-yellow-600">
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Best</div>
+                <Badge className="text-xl px-3 py-1 bg-yellow-500 hover:bg-yellow-600">
                   {highScore}
                 </Badge>
               </div>
               <div className="text-center">
-                <div className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider sm:tracking-widest mb-1">Time</div>
+                <div className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider sm:tracking-widest mb-1 sm:mb-2">Time</div>
                 <Badge
                   variant={timeLeft <= 3 ? "destructive" : "secondary"}
                   className={cn(
@@ -464,7 +481,7 @@ function App() {
           {/* Community Cards Section */}
           <div className="px-2 sm:px-10 py-4 sm:py-8 bg-white border-b-2 border-black">
             <div className="text-xs sm:text-sm font-bold text-gray-500 uppercase tracking-widest text-center mb-3 sm:mb-6">
-              Board
+              Community Board
             </div>
             <div className="flex justify-center items-center">
               <div key={`community-${scenarioId}`} className="flex gap-1 sm:gap-2">
@@ -475,7 +492,7 @@ function App() {
                     key={`revealed-${idx}`}
                     rank={card.rank}
                     suit={mapSuit(card.suit)}
-                    size="sm"
+                    size={cardSize}
                   />
                 ))}
                 {/* Show face-down cards for unrevealed */}
@@ -483,7 +500,7 @@ function App() {
                   <PlayingCard
                     key={`facedown-${idx}`}
                     faceDown={true}
-                    size="sm"
+                    size={cardSize}
                   />
                 ))}
               </div>
@@ -492,7 +509,7 @@ function App() {
 
           {/* Hand Selection Section - Horizontal layout */}
           <div className="flex-1 flex flex-col justify-center bg-white px-2 sm:px-10">
-            <div className="grid grid-cols-3 gap-2 sm:gap-8 items-center my-4 sm:my-8">
+            <div className="grid grid-cols-3 gap-2 sm:gap-8 items-center mt-4 sm:mt-8 mb-6 sm:mb-12">
               {/* Hand 1 */}
               <div
                 className={cn(
@@ -514,7 +531,7 @@ function App() {
                       key={idx}
                       rank={card.rank}
                       suit={mapSuit(card.suit)}
-                      size="sm"
+                      size={cardSize}
                     />
                   ))}
                 </div>
@@ -551,7 +568,7 @@ function App() {
                       key={idx}
                       rank={card.rank}
                       suit={mapSuit(card.suit)}
-                      size="sm"
+                      size={cardSize}
                     />
                   ))}
                 </div>

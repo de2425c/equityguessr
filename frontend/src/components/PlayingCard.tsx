@@ -58,10 +58,10 @@ const getCardFilename = (rank: string, suit: string): string => {
 };
 
 const sizeMap = {
-  xs: { width: 50, height: 70 },    // Extra small for mobile
-  sm: { width: 65, height: 91 },    // Small cards for mobile
-  md: { width: 85, height: 119 },   // Medium cards
-  lg: { width: 100, height: 140 },  // Large cards for desktop
+  xs: { width: 50, height: 70 },    // Extra small
+  sm: { width: 60, height: 84 },    // Small cards for mobile
+  md: { width: 100, height: 140 },  // Medium cards for desktop
+  lg: { width: 120, height: 168 },  // Large cards
 };
 
 export function PlayingCard({ rank, suit, size = 'md', faceDown = false }: PlayingCardProps) {
